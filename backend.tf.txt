@@ -1,0 +1,6 @@
+terraform {
+    backend "gcs" {
+        bucket = "bkt-uat-nane1-cxbi-tfstate"
+        prefix = "echat/dev"
+    }
+}

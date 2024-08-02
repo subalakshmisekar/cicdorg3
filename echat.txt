@@ -1,0 +1,250 @@
+### Global Variables ###
+variables:
+   GIT_SSL_NO_VERIFY: "true"
+   SA_DEV: sa-cicd-dev-nane1-cxbi-auto
+   SA_UAT: sa-cicd-uat-nane1-cxbi-auto
+   SA_PRD: sa-cicd-prod-nane1-cxbi-auto
+   SK_DEV: $GCP_HADOOP_SERVICEKEY_DEV
+   SK_UAT: $GCP_HADOOP_SERVICEKEY_UAT
+   SK_PRD: $GCP_HADOOP_SERVICEKEY_PRD
+   PRJ_ID_auto: prj-cxbi-dev-nane1-eng-auto
+   PRJ_ID_DEV_edw: prj-cxbi-dev-nane1-eng-edw
+   PRJ_ID_PRD_edw: prj-cxbi-prod-nane1-eng-edw
+   PRJ_ID_PRD_auto: prj-cxbi-prod-nane1-eng-auto
+   PRJ_ID_landing: prj-cxbi-uat-nane1-eng-lnd
+   PRJ_ID_PRD_landing: prj-cxbi-prod-nane1-eng-lnd
+   
+   
+### Pipeline Order ###
+stages:
+  - Dataproc_jobs
+  - Deploy_DAGs
+  - BQ table
+  - Copy csv file
+  - Monitoring
+
+
+### Dataproc_jobs ###
+
+
+Dataproc_jobs_dev:
+  stage: Dataproc_jobs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SERVICE_KEY > gcloud-service-key.json 
+    - gcloud auth activate-service-account sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key.json
+    - gcloud config set project $PRJ_ID_landing
+  script:
+    - gsutil cp -r ./dataproc/* gs://bkt-dev-nane1-cxbi-code/echat/dataproc
+
+Dataproc_jobs_uat:
+  stage: Dataproc_jobs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SERVICE_KEY_UAT > gcloud-service-key_uat.json 
+    - gcloud auth activate-service-account sa-cicd-uat-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key_uat.json
+    - gcloud config set project $PRJ_ID_landing
+  script:
+    - gsutil -i sa-echat-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./dataproc/* gs://bkt-uat-nane1-cxbi-code/echat/dataproc
+
+Dataproc_jobs_PROD:
+  stage: Dataproc_jobs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > gcloud-service-key-prd.json 
+    - gcloud auth activate-service-account sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-prd.json
+    - gcloud config set project $PRJ_ID_PRD_landing
+  script:
+    # gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./dataproc/* gs://bkt-prod-nane1-cxbi-code/echat/dataproc
+    - gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./dataproc/common/cust_identifier_qry.sql gs://bkt-prod-nane1-cxbi-code/echat/dataproc/common
+
+############################ Deploy DAGs on Dev cloud composer ############################
+
+### Deploy DAGs on cloud composer ###
+
+Composer_DAG_deploy_dev:
+  stage: Deploy_DAGs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SERVICE_KEY > gcloud-service-key.json 
+    - gcloud auth activate-service-account sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key.json
+    - gcloud config set project $PRJ_ID_auto
+  script:
+    - gsutil cp -r ./composer/dag/*.py gs://northamerica-northeast1-clo-d17e0707-bucket/dags
+    - gsutil cp -r ./composer/data/* gs://northamerica-northeast1-clo-d17e0707-bucket/data
+    - gsutil cp -r ./composer/plugin/* gs://northamerica-northeast1-clo-d17e0707-bucket/plugins
+
+Composer_DAG_deploy_uat:
+  stage: Deploy_DAGs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_UAT > gcloud-service-key_uat.json 
+    - gcloud auth activate-service-account sa-cicd-uat-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key_uat.json
+    - gcloud config set project $PRJ_ID_auto
+  script:
+    - gsutil -i sa-echat-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/dag/*.py gs://northamerica-northeast1-clo-4c760f13-bucket/dags
+    - gsutil -i sa-echat-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/data/* gs://northamerica-northeast1-clo-4c760f13-bucket/data
+    - gsutil -i sa-echat-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/plugin/* gs://northamerica-northeast1-clo-4c760f13-bucket/plugins
+
+Composer_DAG_deploy_PROD:
+  stage: Deploy_DAGs
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > gcloud-service-key-prd.json 
+    - gcloud auth activate-service-account sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-prd.json
+    - gcloud config set project $PRJ_ID_PRD_auto
+  script:
+    - gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/dag/echat-cloud-survey-ref-initial-prod.py gs://northamerica-northeast1-com-1853bead-bucket/dags/dags-echat
+    - gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/dag/echat-cloud-prod.py gs://northamerica-northeast1-com-1853bead-bucket/dags/dags-echat
+    - gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/plugin/* gs://northamerica-northeast1-com-1853bead-bucket/plugins
+
+######## BQ Table Creation #########
+
+BQ table UAT:
+  stage: BQ table
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/gcloud_terraform:1.3.9
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+
+### Script which will run first for authentication purpose ###
+  before_script:
+    - echo $SERVICE_KEY > gcloud-service-key.json # Google Cloud service accounts
+    - gcloud auth activate-service-account sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key.json
+    - gcloud config set project $PRJ_ID_DEV_edw
+
+### executing terraform script on a custom workspace ###
+  script:
+    - gcloud builds submit --config ./cloudbuild/terraform-cloudbuild.yaml --project prj-cxbi-dev-nane1-eng-auto 
+    - echo "Executed Build"
+
+
+BQ table PRD:
+  stage: BQ table
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/gcloud_terraform:1.3.9
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+
+### Script which will run first for authentication purpose ###
+  before_script:
+    - echo $SK_PRD > gcloud-service-key-prd.json 
+    - gcloud auth activate-service-account sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-prd.json
+    - gcloud config set project $PRJ_ID_PRD_edw
+
+### executing terraform script on a custom workspace ###
+  script:
+    - gcloud builds submit --config ./cloudbuild/terraform-cloudbuild-prod.yaml --project prj-cxbi-prod-nane1-eng-auto 
+    - echo "Executed Build"
+
+##### Copying reference csv file to echat data bucket - prod ############
+Reference_File:
+  stage: Copy csv file
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > gcloud-service-key-prd.json 
+    - gcloud auth activate-service-account sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-prd.json
+    - gcloud config set project $PRJ_ID_PRD_landing
+  script:
+    #- gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./reference_data/survey_qa_ref/survey_questions_answers_reference.csv gs://bkt-echat-prod-nane1-cxbi-data/reference_data/survey_qa_ref/
+    #- gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com ls gs://bkt-echat-prod-nane1-cxbi-data/reference_data/survey_qa_ref/
+    - gsutil -i sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r gs://bkt-echat-dev-nane1-cxbi-data/portalreports/busystate_historical gs://bkt-echat-prod-nane1-cxbi-data/portalreports/busystate_historical
+
+
+Monitoring Dev:
+  stage: Monitoring
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/gcloud_terraform:1.3.9
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+### Script which will run first for authentication purpose ###
+  before_script:
+    - echo $SK_DEV > gcloud-service-key-dev.json 
+    - gcloud auth activate-service-account sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-dev.json
+    - gcloud config set project prj-cxbi-dev-nane1-eng-auto
+### executing terraform script on a custom workspace ###
+  script:
+    - gcloud builds submit --config ./cloudbuild/terraform-cloudbuild-monitoring-dev.yaml
+    - echo "Executed Build"
+
+Monitoring Prod:
+  stage: Monitoring
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/gcloud_terraform:1.3.9
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+### Script which will run first for authentication purpose ###
+  before_script:
+    - echo $SK_PRD > gcloud-service-key-prod.json 
+    - gcloud auth activate-service-account sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com --key-file=gcloud-service-key-prod.json
+    - gcloud config set project prj-cxbi-prod-nane1-eng-auto
+### executing terraform script on a custom workspace ###
+  script:
+    - gcloud builds submit --config ./cloudbuild/terraform-cloudbuild-monitoring-prod.yaml
+    - echo "Executed Build"
+

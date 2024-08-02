@@ -1,0 +1,22 @@
+resource "google_monitoring_alert_policy" "echat_pipeline_failure_alert" {
+ project = "prj-cxbi-prod-nane1-eng-auto"
+ display_name = "alert-policy-prod-nane1-cxbi-inge-echat-pipelinefailure"
+ combiner     = "OR"
+ conditions {
+   display_name = "Condition for eChat Pipeline Failure Alert"
+   condition_matched_log {
+     filter = "resource.type=\"cloud_composer_environment\" AND (labels.workflow=\"JF_ECHAT\" OR labels.workflow=\"JF_ECHAT_SUBPROCESS\") AND severity=ERROR"
+   }
+ }
+ notification_channels = ["projects/prj-cxbi-prod-nane1-eng-auto/notificationChannels/17149349826877258435", "projects/prj-cxbi-prod-nane1-eng-auto/notificationChannels/13481452673338479061", "projects/prj-cxbi-prod-nane1-eng-auto/notificationChannels/946717226284979919"]
+ alert_strategy {
+   notification_rate_limit {
+     period = "300s"
+   }
+   auto_close = "604800s" # 7 days
+ }
+ documentation {
+   content   = "Echat OR Echat Subprocess pipeline has failed. Please click the policy name to see details."
+   mime_type = "text/markdown"
+ }
+}

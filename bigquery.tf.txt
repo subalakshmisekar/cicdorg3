@@ -1,0 +1,19 @@
+resource "google_bigquery_table" "test-bq-table" {
+  project = "prj-cxbi-dev-nane1-eng-edw"
+  dataset_id = "BI_EDW_CURATED"
+  table_id   = "TC_ECHAT_TEST_TF"
+  schema = <<EOF
+[
+  {
+    "name": "businessunit",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "agentgroup",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]
+EOF
+}

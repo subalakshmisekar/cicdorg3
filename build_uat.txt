@@ -1,0 +1,16 @@
+steps:     
+- id: 'building artifacts'
+  name: 'maven:latest'
+  entrypoint: 'mvn'
+  args: ['package','-f=spark_streaming/pom.xml','-Dmaven.test.skip=true']  
+  
+logsBucket: 'gs://bkt-uat-nane1-cxbi-code/rtcp/logs'
+options:
+  logging: GCS_ONLY
+​
+artifacts:
+  objects:
+    location: 'gs://bkt-uat-nane1-cxbi-code/rtcp/jars'
+    paths: ['/workspace/spark_streaming/target/*.jar']
+​
+serviceAccount: 'projects/prj-cxbi-dev-nane1-eng-auto/serviceAccounts/sa-cicd-uat-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com'

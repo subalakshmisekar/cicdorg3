@@ -1,0 +1,37 @@
+steps:
+-   id: 'cloud sdk'
+    name: 'google/cloud-sdk:slim'
+    entrypoint: 'sh'
+    args:
+    - '-c'
+    - |
+        echo "before impersonation"
+        gcloud config list account --format "value(core.account)"
+        export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com
+        gcloud config list account --format "value(core.account)"
+        gcloud config set auth/impersonate_service_account sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com
+        gcloud config set account sa-echat-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com
+        echo "post impersonation"
+        gcloud auth list
+
+-   id: 'terraform'
+    name: 'hashicorp/terraform:1.1.7'
+    entrypoint: 'sh'
+    args:
+    - '-c'
+    - |
+        cd ./terraform/prod
+        terraform init
+        terraform validate
+        echo "Validated main terraform script"
+        terraform plan -out echatprod.terraform.plan
+        terraform apply --auto-approve echatprod.terraform.plan
+
+### the gcs bucket where build logs are to be stored ###
+logsBucket: 'gs://prj-cxbi-prod-nane1-eng-auto_cloudbuild/logs'
+options:
+  logging: GCS_ONLY
+
+### SA details to execute the build ###
+serviceAccount: 'projects/prj-cxbi-prod-nane1-eng-auto/serviceAccounts/sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com'
+

@@ -1,0 +1,19 @@
+### to create the latest jar ###
+steps:
+- name: maven:3.6.3-jdk-8
+  entrypoint: mvn
+  args: ['package','-f=spark_streaming/pom.xml','-Dmaven.test.skip=true']
+​
+### the gcs bucket where build logs are to be stored ###
+logsBucket: 'gs://prj-cxbi-dev-nane1-eng-auto_cloudbuild/rtcp/logs'
+options:
+  logging: GCS_ONLY
+​
+### SA details to execute the build ###
+serviceAccount: 'projects/prj-cxbi-dev-nane1-eng-auto/serviceAccounts/sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com'
+​
+### gcs bucket location to store the jar ###
+artifacts:
+  objects:
+    location: 'gs://prj-cxbi-dev-nane1-eng-auto_cloudbuild/rtcp/jars'
+    paths: ['/workspace/spark_streaming/target/*.jar']

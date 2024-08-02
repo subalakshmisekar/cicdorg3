@@ -1,0 +1,142 @@
+variables:
+   GIT_SSL_NO_VERIFY: "true"
+   SA_DEV: sa-cicd-dev-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com
+   SA_UAT: sa-cicd-uat-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com
+   SA_PRD: sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com
+   SK_DEV: $GCP_HADOOP_SERVICEKEY_DEV
+   SK_UAT: $GCP_HADOOP_SERVICEKEY_UAT
+   SK_PRD: $GCP_HADOOP_SERVICEKEY_PRD
+
+stages:
+  - Build Artifacts
+  - Workflow Creation
+  - Deploy DAG
+
+Build Artifacts Dev:
+  stage: Build Artifacts
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_DEV > SK_DEV.json
+    - gcloud auth activate-service-account $SA_DEV --key-file=SK_DEV.json
+    - gcloud config set project prj-cxbi-dev-nane1-eng-auto
+  script:
+    - gcloud builds submit --config ./cloudbuild/buildjar.yaml 
+    - echo "Executed Build"
+
+
+Build Artifacts UAT:
+  stage: Build Artifacts
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_UAT > SK_UAT.json 
+    - gcloud auth activate-service-account $SA_UAT --key-file=SK_UAT.json
+    - gcloud config set project prj-cxbi-dev-nane1-eng-auto
+  script:
+    - gcloud builds submit --config ./cloudbuild/buildjar_uat.yaml
+    - echo "Created jar"
+
+
+Workflow Creation UAT:
+  stage: Workflow Creation
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_UAT > SK_UAT.json 
+    - gcloud auth activate-service-account $SA_UAT --key-file=SK_UAT.json
+    - gcloud config set project prj-cxbi-dev-nane1-eng-auto
+  script:
+    - gcloud builds submit --config ./cloudbuild/workflow_uat.yaml
+    - echo "Created workflow"
+
+
+Deploy DAG UAT:
+  stage: Deploy DAG
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_UAT > SK_UAT.json 
+    - gcloud auth activate-service-account $SA_UAT --key-file=SK_UAT.json
+    - gcloud config set project prj-cxbi-dev-nane1-eng-auto
+  script:
+    - gsutil -i sa-dap-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/rtcp_dataproc.py gs://northamerica-northeast1-clo-4c760f13-bucket/dags
+
+Build Artifacts Prod:
+  stage: Build Artifacts
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > SK_PRD.json 
+    - gcloud auth activate-service-account $SK_PRD --key-file=SK_PRD.json
+    - gcloud config set project prj-cxbi-prod-nane1-eng-auto
+  script:
+    - gcloud builds submit --config ./cloudbuild/buildjar_uat.yaml
+    - echo "Created jar"
+
+
+Workflow Creation Prod:
+  stage: Workflow Creation
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > SK_PRD.json
+    - gcloud auth activate-service-account $SK_PRD --key-file=SK_PRD.json
+    - gcloud config set project prj-cxbi-prod-nane1-eng-auto
+  script:
+    - gcloud builds submit --config ./cloudbuild/workflow_prod.yaml
+    - echo "Created workflow"
+  
+
+Deploy DAG Prod:
+  stage: Deploy DAG
+  when: manual
+  tags:
+    - de-grprunner
+  image:
+    name: artifactory.bell.corp.bce.ca:5000/docker-doq-test/bi-de-dev-docker-local/cloud-sdk:410.0.0
+    entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:PATH'
+  before_script:
+    - echo $SK_PRD > SK_PRD.json 
+    - gcloud auth activate-service-account $SK_PRD --key-file=SK_PRD.json
+    - gcloud config set project prj-cxbi-prod-nane1-eng-auto
+  script:
+    - gsutil -i sa-dap-prod-nane1-cxbi-inge@prj-cxbi-prod-nane1-eng-inge-1.iam.gserviceaccount.com cp -r ./composer/rtcp_dataproc_prod.py gs://northamerica-northeast1-com-1853bead-bucket/dags

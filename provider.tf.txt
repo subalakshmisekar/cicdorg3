@@ -1,0 +1,6 @@
+## Provider info ##
+provider "google" {
+  project     = "prj-cxbi-dev-nane1-eng-edw"
+  region      = "northamerica-northeast1"
+  credentials = "${file("./creds/sa.json")}"
+}

@@ -1,0 +1,33 @@
+steps:
+- id: 'cloud sdk'
+  name: 'google/cloud-sdk:slim'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      echo "before impersonation"
+      gcloud config list account --format "value(core.account)"
+      export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=sa-dap-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com
+      gcloud config set auth/impersonate_service_account sa-dap-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com
+      gcloud config set account 'sa-dap-uat-nane1-cxbi-inge@prj-cxbi-uat-nane1-eng-inge-1.iam.gserviceaccount.com'
+      echo "post impersonation"
+      gcloud auth list
+​
+- id: 'terraform'
+  name: 'hashicorp/terraform:1.1.7'
+  entrypoint: 'sh'
+  args:
+  - '-c'
+  - |
+      cd ./terraform/uat
+      terraform init
+      terraform validate
+      echo "Validated main terraform script"
+      terraform plan -out rtcpuat.terraform.plan
+      terraform apply --auto-approve rtcpuat.terraform.plan
+​
+logsBucket: 'gs://prj-cxbi-uat-nane1-eng-auto_cloudbuild/logs'
+options:
+  logging: GCS_ONLY
+​
+serviceAccount: 'projects/prj-cxbi-dev-nane1-eng-auto/serviceAccounts/sa-cicd-uat-nane1-cxbi-auto@prj-cxbi-dev-nane1-eng-auto.iam.gserviceaccount.com'

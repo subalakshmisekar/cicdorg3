@@ -1,0 +1,31 @@
+steps:
+-   id: 'cloud sdk'
+    name: 'google/cloud-sdk:slim'
+    entrypoint: 'sh'
+    args:
+    - '-c'
+    - |
+        gcloud config list account --format "value(core.account)"
+        gcloud auth list
+
+-   id: 'terraform'
+    name: 'hashicorp/terraform:1.1.7'
+    entrypoint: 'sh'
+    args:
+    - '-c'
+    - |
+        cd ./terraform-infra/prod
+        terraform init
+        terraform validate
+        echo "Validated main terraform script"
+        terraform plan -out echatprodmonitoring.terraform.plan
+        terraform apply --auto-approve echatprodmonitoring.terraform.plan
+
+### the gcs bucket where build logs are to be stored ###
+logsBucket: 'gs://prj-cxbi-prod-nane1-eng-auto_cloudbuild/logs'
+options:
+  logging: GCS_ONLY
+
+### SA details to execute the build ###
+serviceAccount: 'projects/prj-cxbi-prod-nane1-eng-auto/serviceAccounts/sa-cicd-prod-nane1-cxbi-auto@prj-cxbi-prod-nane1-eng-auto.iam.gserviceaccount.com'
+
